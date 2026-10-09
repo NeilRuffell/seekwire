@@ -299,6 +299,7 @@ class MainWindow(Window):
         self.search_downloads_split = None
         self.search_sidebar_split = None
         self.search_sidebar = None
+        self.search_filters_header_actions = None
         self.search_filters_sidebar = None
         self.search_filters_placeholder = None
         self.active_sidebar_filter_page = None
@@ -491,6 +492,14 @@ class MainWindow(Window):
             pass
 
     def save_window_state(self):
+
+        if GTK_API_VERSION == 3 and self.search_sidebar_split is not None:
+            sidebar_position = self.search_sidebar_split.get_position()
+            downloads_position = self.search_downloads_split.get_position()
+            if sidebar_position > 0:
+                config.sections["ui"]["seekwire_sidebar_position"] = sidebar_position
+            if downloads_position > 0:
+                config.sections["ui"]["seekwire_downloads_position"] = downloads_position
 
         config.sections["ui"]["maximized"] = self.is_maximized()
 
@@ -845,7 +854,12 @@ class MainWindow(Window):
         sidebar.set_border_width(9)
         sidebar.set_size_request(190, -1)
         self.search_sidebar = sidebar
-        sidebar.pack_start(Gtk.Label(label=_("Filter Results"), xalign=0), False, False, 0)
+        header = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL, spacing=6)
+        heading = Gtk.Label(label=_("Filter Results"), xalign=0)
+        header.pack_start(heading, True, True, 0)
+        self.search_filters_header_actions = Gtk.Box()
+        header.pack_end(self.search_filters_header_actions, False, False, 0)
+        sidebar.pack_start(header, False, False, 0)
         sidebar.pack_start(Gtk.Separator(orientation=Gtk.Orientation.HORIZONTAL), False, False, 0)
 
         self.search_filters_sidebar = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=6)
@@ -860,7 +874,7 @@ class MainWindow(Window):
         self.search_downloads_split = Gtk.Paned.new(Gtk.Orientation.VERTICAL)
         self.search_downloads_split.set_wide_handle(True)
         self.search_sidebar_split.pack2(self.search_downloads_split, resize=True, shrink=False)
-        self.search_sidebar_split.set_position(215)
+        self.search_sidebar_split.set_position(config.sections["ui"].get("seekwire_sidebar_position", 215))
         self.search_sidebar_split.show()
 
         # Only the upper search area may be hidden when no searches exist.
@@ -875,7 +889,10 @@ class MainWindow(Window):
         downloads_widget.reparent(self.search_downloads_split)
         self.search_downloads_split.child_set_property(downloads_widget, "resize", False)
         self.search_downloads_split.child_set_property(downloads_widget, "shrink", False)
-        self.search_downloads_split.set_position(420)
+        self.search_downloads_split.set_position(
+            config.sections["ui"].get("seekwire_downloads_position",
+                                      max(260, int(config.sections["ui"]["height"] * 0.60)))
+        )
 
         self.search_content.show()
         downloads_heading = Gtk.Label(label=_("Downloads"), xalign=0)
@@ -919,6 +936,7 @@ class MainWindow(Window):
             old_page = self.active_sidebar_filter_page
             if old_page is not active_page:
                 # Restore ownership to the tab so closing it destroys all its widgets.
+                old_page.clear_undo_filters_button.reparent(old_page.seekwire_clear_parent)
                 old_page.filters_container.reparent(old_page.seekwire_filters_parent)
                 self.active_sidebar_filter_page = None
 
@@ -958,6 +976,10 @@ class MainWindow(Window):
             clear_button = active_page.clear_undo_filters_button
             clear_button.set_halign(Gtk.Align.END)
             clear_button.set_hexpand(False)
+            if not hasattr(active_page, "seekwire_clear_parent"):
+                active_page.seekwire_clear_parent = clear_button.get_parent()
+            clear_button.reparent(self.search_filters_header_actions)
+            clear_button.show()
 
             # The relocated revealer is always expanded; the original toggle
             # controls sidebar visibility instead of hiding the inputs alone.
