@@ -931,11 +931,33 @@ class MainWindow(Window):
             # The existing filter FlowBox was designed for a wide horizontal
             # toolbar. Retain its children and callbacks, but stack one per row.
             filter_box = active_page.filters_container.get_child()
+            filter_box.set_orientation(Gtk.Orientation.VERTICAL)
+            filter_box.set_spacing(6)
+            filter_box.set_hexpand(True)
+
             for child in filter_box.get_children():
                 if isinstance(child, Gtk.FlowBox):
                     child.set_min_children_per_line(1)
                     child.set_max_children_per_line(1)
                     child.set_homogeneous(True)
+                    child.set_hexpand(True)
+                    child.set_halign(Gtk.Align.FILL)
+                    for filter_row in child.get_children():
+                        filter_row.set_hexpand(True)
+                        filter_row.set_halign(Gtk.Align.FILL)
+                        row_content = filter_row.get_child()
+                        if row_content is not None:
+                            row_content.set_hexpand(True)
+                elif isinstance(child, Gtk.Separator):
+                    # The separator belonged between the wide horizontal
+                    # filter group and Clear Filters, not between vertical rows.
+                    child.hide()
+
+            # Keep the *original* Clear/Restore Filters button, but place it
+            # after the rows, aligned to the right without stretching it.
+            clear_button = active_page.clear_undo_filters_button
+            clear_button.set_halign(Gtk.Align.END)
+            clear_button.set_hexpand(False)
 
             # The relocated revealer is always expanded; the original toggle
             # controls sidebar visibility instead of hiding the inputs alone.
