@@ -357,6 +357,8 @@ class Config:
                 "tabinfo": "Top",
                 "tabbrowse": "Top",
                 "tabsearch": "Top",
+                "seekwire_sidebar_position": 215,
+                "seekwire_downloads_position": 420,
                 "globalfont": "",
                 "textviewfont": "",
                 "chatfont": "",
