@@ -819,15 +819,16 @@ class MainWindow(Window):
         """Keep a resizable downloads table beneath search results in GTK3."""
         # IconNotebook creates the search notebook inside search_content.
         search_widget = self.search_content.get_children()[0]
-        search_widget.ref()
-        self.search_content.remove(search_widget)
-
         self.search_downloads_split = Gtk.Paned.new(Gtk.Orientation.VERTICAL)
         self.search_downloads_split.set_wide_handle(True)
-        self.search_downloads_split.set_position(420)
-        self.search_downloads_split.pack1(search_widget, resize=True, shrink=False)
-        search_widget.unref()
         self.search_content.pack_start(self.search_downloads_split, True, True, 0)
+
+        # Gtk.Widget.reparent() is supported in GTK3 and keeps the widget alive
+        # during the move. PyGObject does not expose GObject.ref()/unref().
+        search_widget.reparent(self.search_downloads_split)
+        self.search_downloads_split.child_set_property(search_widget, "resize", True)
+        self.search_downloads_split.child_set_property(search_widget, "shrink", False)
+        self.search_downloads_split.set_position(420)
         self.search_downloads_split.show()
 
     def _update_search_downloads_split(self, page_id):
@@ -848,15 +849,10 @@ class MainWindow(Window):
         if current_parent is target_parent:
             return
 
-        downloads_widget.ref()
-        current_parent.remove(downloads_widget)
-
+        downloads_widget.reparent(target_parent)
         if page_id == "search":
-            self.search_downloads_split.pack2(downloads_widget, resize=False, shrink=False)
-        else:
-            self.downloads_content.pack_start(downloads_widget, True, True, 0)
-
-        downloads_widget.unref()
+            self.search_downloads_split.child_set_property(downloads_widget, "resize", False)
+            self.search_downloads_split.child_set_property(downloads_widget, "shrink", False)
 
     def on_switch_page(self, _notebook, page, _page_num):
         self._update_search_downloads_split(page.id)
