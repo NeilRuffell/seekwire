@@ -948,9 +948,8 @@ class MainWindow(Window):
         """Show or hide the GTK3 sidebar using the existing filter toggle."""
         if self.search_sidebar is None:
             return
+        # Do not reset the divider: GTK retains the user's chosen width.
         self.search_sidebar.set_visible(visible)
-        if visible:
-            self.search_sidebar_split.set_position(max(self.search_sidebar_split.get_position(), 215))
 
     def on_switch_page(self, _notebook, page, _page_num):
         self.set_active_header_bar(page.id)
