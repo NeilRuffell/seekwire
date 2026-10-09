@@ -177,7 +177,9 @@ class Searches(IconNotebook):
             break
 
         if GTK_API_VERSION == 3:
-            self.window.update_search_sidebar_filters()
+            # Gtk.Notebook emits switch-page before get_current_page() has
+            # necessarily updated; use the new page passed by the signal.
+            self.window.update_search_sidebar_filters(active_widget=page)
 
     def on_read_changed_page(self, _notebook, page):
 
