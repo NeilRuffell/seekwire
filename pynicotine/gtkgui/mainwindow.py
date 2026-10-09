@@ -850,6 +850,10 @@ class MainWindow(Window):
         downloads_widget.show()
         self.search_downloads_split.show()
 
+        # Notifications and transfer updates now target the combined Search
+        # page rather than a Downloads tab that no longer exists.
+        self.downloads.transfer_page = self.search_page
+
         # Remove the now-empty Downloads navigation page.
         # Preserve the controller and its actual widgets in the lower pane.
         if self.notebook.page_num(self.downloads_page) >= 0:
