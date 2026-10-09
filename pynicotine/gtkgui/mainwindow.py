@@ -298,6 +298,7 @@ class MainWindow(Window):
         # GTK3 search/download split view. GTK4 keeps the upstream layout.
         self.search_downloads_split = None
         self.search_sidebar_split = None
+        self.search_sidebar = None
         self.search_filters_sidebar = None
         self.search_filters_placeholder = None
         self.active_sidebar_filter_page = None
@@ -842,7 +843,8 @@ class MainWindow(Window):
 
         sidebar = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=9)
         sidebar.set_border_width(9)
-        sidebar.set_size_request(165, -1)
+        sidebar.set_size_request(190, -1)
+        self.search_sidebar = sidebar
         sidebar.pack_start(Gtk.Label(label=_("Filter Results"), xalign=0), False, False, 0)
         sidebar.pack_start(Gtk.Separator(orientation=Gtk.Orientation.HORIZONTAL), False, False, 0)
 
@@ -858,7 +860,7 @@ class MainWindow(Window):
         self.search_downloads_split = Gtk.Paned.new(Gtk.Orientation.VERTICAL)
         self.search_downloads_split.set_wide_handle(True)
         self.search_sidebar_split.pack2(self.search_downloads_split, resize=True, shrink=False)
-        self.search_sidebar_split.set_position(185)
+        self.search_sidebar_split.set_position(215)
         self.search_sidebar_split.show()
 
         # Only the upper search area may be hidden when no searches exist.
@@ -925,10 +927,30 @@ class MainWindow(Window):
                 active_page.seekwire_filters_parent = active_page.filters_container.get_parent()
             active_page.filters_container.reparent(self.search_filters_sidebar)
             self.active_sidebar_filter_page = active_page
-            # The original Result Filters toggle remains operational.
-            active_page.filters_button.set_active(True)
+
+            # The existing filter FlowBox was designed for a wide horizontal
+            # toolbar. Retain its children and callbacks, but stack one per row.
+            filter_box = active_page.filters_container.get_child()
+            for child in filter_box.get_children():
+                if isinstance(child, Gtk.FlowBox):
+                    child.set_min_children_per_line(1)
+                    child.set_max_children_per_line(1)
+                    child.set_homogeneous(True)
+
+            # The relocated revealer is always expanded; the original toggle
+            # controls sidebar visibility instead of hiding the inputs alone.
+            active_page.filters_container.set_reveal_child(True)
+            self.set_search_sidebar_visible(active_page.filters_button.get_active())
 
         self.search_filters_placeholder.set_visible(active_page is None)
+
+    def set_search_sidebar_visible(self, visible):
+        """Show or hide the GTK3 sidebar using the existing filter toggle."""
+        if self.search_sidebar is None:
+            return
+        self.search_sidebar.set_visible(visible)
+        if visible:
+            self.search_sidebar_split.set_position(max(self.search_sidebar_split.get_position(), 215))
 
     def on_switch_page(self, _notebook, page, _page_num):
         self.set_active_header_bar(page.id)
