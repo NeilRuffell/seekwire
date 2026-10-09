@@ -307,7 +307,9 @@ class MainWindow(Window):
 
         if GTK_API_VERSION == 3:
             self._init_search_downloads_split()
-            self._update_search_downloads_split(self.current_page_id)
+            if self.current_page_id == "search":
+                self._update_search_downloads_split("search")
+                self.downloads.update_model()
 
     # Initialize #
 
@@ -851,9 +853,6 @@ class MainWindow(Window):
 
         if page_id == "search":
             self.search_downloads_split.pack2(downloads_widget, resize=False, shrink=False)
-            # Downloads normally refreshes on tab focus. Refresh its model
-            # when the integrated table is made visible as well.
-            self.downloads.update_model()
         else:
             self.downloads_content.pack_start(downloads_widget, True, True, 0)
 
@@ -862,6 +861,8 @@ class MainWindow(Window):
     def on_switch_page(self, _notebook, page, _page_num):
         self._update_search_downloads_split(page.id)
         self.set_active_header_bar(page.id)
+        if GTK_API_VERSION == 3 and page.id == "search":
+            self.downloads.update_model()
 
     def on_page_reordered(self, *_args):
 
