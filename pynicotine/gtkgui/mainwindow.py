@@ -297,6 +297,7 @@ class MainWindow(Window):
 
         # GTK3 search/download split view. GTK4 keeps the upstream layout.
         self.search_downloads_split = None
+        self.search_sidebar_split = None
 
         # Tab visibility/order
         self.append_main_tabs()
@@ -810,7 +811,12 @@ class MainWindow(Window):
             tab_label = self.notebook.get_tab_label(tab.page)
             tab_label.set_start_icon_name(tab_icon_name)
             self.notebook.set_tab_reorderable(tab.page, True)
-            self.set_tab_expand(tab.page)
+            if GTK_API_VERSION == 3:
+                # Classic toolbar-style tabs should fit their labels, not
+                # stretch to fill the entire width of the window.
+                self.notebook.set_tab_expand(tab.page, False)
+            else:
+                self.set_tab_expand(tab.page)
 
     def connect_tab_signals(self):
 
@@ -826,9 +832,34 @@ class MainWindow(Window):
         search_widget = self.search_content.get_children()[0]
         downloads_widget = self.downloads_page.get_children()[0]
 
+        # Separate left navigation/filter area from the dual-panel workspace.
+        self.search_sidebar_split = Gtk.Paned.new(Gtk.Orientation.HORIZONTAL)
+        self.search_sidebar_split.set_wide_handle(True)
+        self.search_content.pack_start(self.search_sidebar_split, True, True, 0)
+
+        sidebar = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=9)
+        sidebar.set_border_width(9)
+        sidebar.set_size_request(165, -1)
+        sidebar.pack_start(Gtk.Label(label=_("Filter Results"), xalign=0), False, False, 0)
+        sidebar.pack_start(Gtk.Separator(orientation=Gtk.Orientation.HORIZONTAL), False, False, 0)
+
+        # No imitation filter controls: Nicotine+'s existing Result Filters
+        # remain usable in each search tab. Later we can relocate the *real*
+        # controls to this sidebar without duplicating their filter logic.
+        help_label = Gtk.Label(
+            label=_("Open a search and select Result Filters to filter files.")
+        )
+        help_label.set_xalign(0)
+        help_label.set_line_wrap(True)
+        sidebar.pack_start(help_label, False, False, 0)
+        sidebar.show_all()
+        self.search_sidebar_split.pack1(sidebar, resize=False, shrink=False)
+
         self.search_downloads_split = Gtk.Paned.new(Gtk.Orientation.VERTICAL)
         self.search_downloads_split.set_wide_handle(True)
-        self.search_content.pack_start(self.search_downloads_split, True, True, 0)
+        self.search_sidebar_split.pack2(self.search_downloads_split, resize=True, shrink=False)
+        self.search_sidebar_split.set_position(185)
+        self.search_sidebar_split.show()
 
         # Only the upper search area may be hidden when no searches exist.
         # IconNotebook normally hides search_content itself; that previously
