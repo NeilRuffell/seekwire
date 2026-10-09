@@ -1532,7 +1532,8 @@ class MainWindow(Window):
         for dialog in reversed(Window.active_dialogs):
             dialog.close()
 
-        # Save config, in case application is killed later
+        # Save layout positions before writing configuration when minimized to tray.
+        self.save_window_state()
         config.write_configuration()
 
         # Hide window
