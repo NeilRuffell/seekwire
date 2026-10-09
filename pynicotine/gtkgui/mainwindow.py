@@ -853,7 +853,6 @@ class MainWindow(Window):
         sidebar = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=9)
         sidebar.set_border_width(9)
         sidebar.set_size_request(190, -1)
-        self.search_sidebar = sidebar
         header = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL, spacing=6)
         heading = Gtk.Label(label=_("Filter Results"), xalign=0)
         header.pack_start(heading, True, True, 0)
@@ -869,7 +868,11 @@ class MainWindow(Window):
         self.search_filters_sidebar.pack_start(self.search_filters_placeholder, False, False, 0)
         sidebar.pack_start(self.search_filters_sidebar, True, True, 0)
         sidebar.show_all()
-        self.search_sidebar_split.pack1(sidebar, resize=False, shrink=False)
+        sidebar_frame = Gtk.Frame(shadow_type=Gtk.ShadowType.IN)
+        sidebar_frame.add(sidebar)
+        sidebar_frame.show()
+        self.search_sidebar = sidebar_frame
+        self.search_sidebar_split.pack1(sidebar_frame, resize=False, shrink=False)
 
         self.search_downloads_split = Gtk.Paned.new(Gtk.Orientation.VERTICAL)
         self.search_downloads_split.set_wide_handle(True)
@@ -881,14 +884,18 @@ class MainWindow(Window):
         # IconNotebook normally hides search_content itself; that previously
         # hid both panes, including Downloads, at application startup.
         search_upper = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, visible=True)
-        self.search_downloads_split.pack1(search_upper, resize=True, shrink=False)
+        search_frame = Gtk.Frame(shadow_type=Gtk.ShadowType.IN)
+        search_frame.add(search_upper)
+        search_frame.show()
+        self.search_downloads_split.pack1(search_frame, resize=True, shrink=False)
         search_widget.reparent(search_upper)
         self.search.parent = search_upper
 
-        # Transfer the *existing* Downloads page content, including its toolbar.
-        downloads_widget.reparent(self.search_downloads_split)
-        self.search_downloads_split.child_set_property(downloads_widget, "resize", True)
-        self.search_downloads_split.child_set_property(downloads_widget, "shrink", False)
+        # Frame the existing Downloads page content without rebuilding it.
+        downloads_frame = Gtk.Frame(shadow_type=Gtk.ShadowType.IN)
+        self.search_downloads_split.pack2(downloads_frame, resize=True, shrink=False)
+        downloads_widget.reparent(downloads_frame)
+        downloads_frame.show()
         self.search_downloads_split.set_position(
             config.sections["ui"].get("seekwire_downloads_position",
                                       max(260, int(config.sections["ui"]["height"] * 0.60)))
