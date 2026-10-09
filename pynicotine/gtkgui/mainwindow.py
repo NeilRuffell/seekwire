@@ -842,10 +842,12 @@ class MainWindow(Window):
         for tab in self.tabs.values():
             label = self.notebook.get_tab_label(tab.page)
             if label is not None:
-                label.set_margin_start(2)
-                label.set_margin_end(2)
-                label.set_margin_top(0)
-                label.set_margin_bottom(0)
+                # IconNotebook returns a TabLabel wrapper, not Gtk.Widget.
+                widget = label.container
+                widget.set_margin_start(2)
+                widget.set_margin_end(2)
+                widget.set_margin_top(0)
+                widget.set_margin_bottom(0)
 
         # Each page owns its original toolbar; only Search is made compact
         # here, leaving other pages' layouts and controls unchanged.
