@@ -288,6 +288,9 @@ class MainWindow(Window):
         self.set_up_actions()
         self.set_up_menu()
 
+        # GTK3 search/download split view. GTK4 keeps the upstream layout.
+        self.search_downloads_split = None
+
         # Tab visibility/order
         self.append_main_tabs()
         self.set_tab_positions()
@@ -301,6 +304,10 @@ class MainWindow(Window):
 
         # Show window
         self.init_window()
+
+        if GTK_API_VERSION == 3:
+            self._init_search_downloads_split()
+            self._update_search_downloads_split(self.current_page_id)
 
     # Initialize #
 
@@ -806,7 +813,54 @@ class MainWindow(Window):
         self.userinfo.connect_signals()
         self.userbrowse.connect_signals()
 
+    def _init_search_downloads_split(self):
+        """Keep a resizable downloads table beneath search results in GTK3."""
+        # IconNotebook creates the search notebook inside search_content.
+        search_widget = self.search_content.get_children()[0]
+        search_widget.ref()
+        self.search_content.remove(search_widget)
+
+        self.search_downloads_split = Gtk.Paned.new(Gtk.Orientation.VERTICAL)
+        self.search_downloads_split.set_wide_handle(True)
+        self.search_downloads_split.set_position(420)
+        self.search_downloads_split.pack1(search_widget, resize=True, shrink=False)
+        search_widget.unref()
+        self.search_content.pack_start(self.search_downloads_split, True, True, 0)
+        self.search_downloads_split.show()
+
+    def _update_search_downloads_split(self, page_id):
+        """Move the *same* download view between Search and Downloads tabs.
+
+        GTK widgets can only have one parent, so never clone the transfers
+        model or present a disconnected second downloads table.
+        """
+        if self.search_downloads_split is None:
+            return
+
+        downloads_widget = self.downloads.container
+        target_parent = (
+            self.search_downloads_split if page_id == "search"
+            else self.downloads_content
+        )
+        current_parent = downloads_widget.get_parent()
+        if current_parent is target_parent:
+            return
+
+        downloads_widget.ref()
+        current_parent.remove(downloads_widget)
+
+        if page_id == "search":
+            self.search_downloads_split.pack2(downloads_widget, resize=False, shrink=False)
+            # Downloads normally refreshes on tab focus. Refresh its model
+            # when the integrated table is made visible as well.
+            self.downloads.update_model()
+        else:
+            self.downloads_content.pack_start(downloads_widget, True, True, 0)
+
+        downloads_widget.unref()
+
     def on_switch_page(self, _notebook, page, _page_num):
+        self._update_search_downloads_split(page.id)
         self.set_active_header_bar(page.id)
 
     def on_page_reordered(self, *_args):
