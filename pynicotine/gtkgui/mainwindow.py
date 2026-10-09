@@ -298,6 +298,9 @@ class MainWindow(Window):
         # GTK3 search/download split view. GTK4 keeps the upstream layout.
         self.search_downloads_split = None
         self.search_sidebar_split = None
+        self.search_filters_sidebar = None
+        self.search_filters_placeholder = None
+        self.active_sidebar_filter_page = None
 
         # Tab visibility/order
         self.append_main_tabs()
@@ -843,15 +846,12 @@ class MainWindow(Window):
         sidebar.pack_start(Gtk.Label(label=_("Filter Results"), xalign=0), False, False, 0)
         sidebar.pack_start(Gtk.Separator(orientation=Gtk.Orientation.HORIZONTAL), False, False, 0)
 
-        # No imitation filter controls: Nicotine+'s existing Result Filters
-        # remain usable in each search tab. Later we can relocate the *real*
-        # controls to this sidebar without duplicating their filter logic.
-        help_label = Gtk.Label(
-            label=_("Open a search and select Result Filters to filter files.")
-        )
-        help_label.set_xalign(0)
-        help_label.set_line_wrap(True)
-        sidebar.pack_start(help_label, False, False, 0)
+        self.search_filters_sidebar = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=6)
+        self.search_filters_placeholder = Gtk.Label(label=_("Open a search to see its filters."))
+        self.search_filters_placeholder.set_xalign(0)
+        self.search_filters_placeholder.set_line_wrap(True)
+        self.search_filters_sidebar.pack_start(self.search_filters_placeholder, False, False, 0)
+        sidebar.pack_start(self.search_filters_sidebar, True, True, 0)
         sidebar.show_all()
         self.search_sidebar_split.pack1(sidebar, resize=False, shrink=False)
 
@@ -876,10 +876,19 @@ class MainWindow(Window):
         self.search_downloads_split.set_position(420)
 
         self.search_content.show()
+        downloads_heading = Gtk.Label(label=_("Downloads"), xalign=0)
+        downloads_heading.set_margin_start(9)
+        downloads_heading.set_margin_top(5)
+        downloads_heading.set_margin_bottom(5)
+        downloads_widget.pack_start(downloads_heading, False, False, 0)
+        downloads_widget.reorder_child(downloads_heading, 0)
+        downloads_heading.show()
+
         self.downloads_toolbar.show()
         self.downloads_content.show()
         downloads_widget.show()
         self.search_downloads_split.show()
+        self.update_search_sidebar_filters()
 
         # Notifications and transfer updates now target the combined Search
         # page rather than a Downloads tab that no longer exists.
@@ -892,6 +901,34 @@ class MainWindow(Window):
         config.sections["ui"]["modes_visible"]["downloads"] = False
         if config.sections["ui"]["last_tab_id"] == "downloads":
             config.sections["ui"]["last_tab_id"] = "search"
+
+    def update_search_sidebar_filters(self):
+        """Show the active search's existing GTK filter controls in the sidebar."""
+        if self.search_filters_sidebar is None:
+            return
+
+        active_widget = self.search.get_current_page()
+        active_page = next(
+            (tab for tab in self.search.pages.values() if tab.container is active_widget),
+            None
+        )
+
+        if self.active_sidebar_filter_page is not None:
+            old_page = self.active_sidebar_filter_page
+            if old_page is not active_page:
+                # Restore ownership to the tab so closing it destroys all its widgets.
+                old_page.filters_container.reparent(old_page.seekwire_filters_parent)
+                self.active_sidebar_filter_page = None
+
+        if active_page is not None and self.active_sidebar_filter_page is not active_page:
+            if not hasattr(active_page, "seekwire_filters_parent"):
+                active_page.seekwire_filters_parent = active_page.filters_container.get_parent()
+            active_page.filters_container.reparent(self.search_filters_sidebar)
+            self.active_sidebar_filter_page = active_page
+            # The original Result Filters toggle remains operational.
+            active_page.filters_button.set_active(True)
+
+        self.search_filters_placeholder.set_visible(active_page is None)
 
     def on_switch_page(self, _notebook, page, _page_num):
         self.set_active_header_bar(page.id)
