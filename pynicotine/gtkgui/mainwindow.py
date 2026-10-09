@@ -838,6 +838,14 @@ class MainWindow(Window):
         search_widget.reparent(self.search_downloads_split)
         downloads_widget.reparent(self.search_downloads_split)
 
+        # Keep the old Downloads tab navigable during this migration.
+        # Its original controls have moved, so explain where to find them.
+        relocated_label = Gtk.Label(label=_("Downloads are now displayed below Search Files."))
+        relocated_label.set_margin_top(24)
+        relocated_label.set_margin_bottom(24)
+        self.downloads_page.pack_start(relocated_label, False, False, 0)
+        relocated_label.show()
+
         self.search_downloads_split.child_set_property(search_widget, "resize", True)
         self.search_downloads_split.child_set_property(search_widget, "shrink", False)
         self.search_downloads_split.child_set_property(downloads_widget, "resize", False)
@@ -854,6 +862,7 @@ class MainWindow(Window):
     def on_switch_page(self, _notebook, page, _page_num):
         self.set_active_header_bar(page.id)
         if GTK_API_VERSION == 3 and page.id == "search":
+            self.downloads_toolbar.show()
             self.downloads.update_model()
 
     def on_page_reordered(self, *_args):
