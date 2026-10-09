@@ -1944,8 +1944,15 @@ class Search:
     def on_toggle_filters(self, *_args):
 
         visible = self.filters_button.get_active()
-        self.filters_container.set_reveal_child(visible)
         config.sections["searches"]["filters_visible"] = visible
+
+        if GTK_API_VERSION == 3 and self.window.active_sidebar_filter_page is self:
+            # SeekWire uses the original toggle to show/hide the sidebar.
+            # Keep the actual filter widgets expanded inside that sidebar.
+            self.filters_container.set_reveal_child(True)
+            self.window.set_search_sidebar_visible(visible)
+        else:
+            self.filters_container.set_reveal_child(visible)
 
         if visible:
             self.filter_include_combobox.grab_focus()
