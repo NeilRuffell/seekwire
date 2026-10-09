@@ -312,6 +312,7 @@ class Searches(IconNotebook):
         page.clear()
 
         if GTK_API_VERSION == 3 and self.window.active_sidebar_filter_page is page:
+            page.clear_undo_filters_button.reparent(page.seekwire_clear_parent)
             page.filters_container.reparent(page.seekwire_filters_parent)
             self.window.active_sidebar_filter_page = None
 
