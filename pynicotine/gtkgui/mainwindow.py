@@ -315,7 +315,6 @@ class MainWindow(Window):
         if GTK_API_VERSION == 3:
             self._init_search_downloads_split()
             if self.current_page_id == "search":
-                self._update_search_downloads_split("search")
                 self.downloads.update_model()
 
     # Initialize #
@@ -823,46 +822,36 @@ class MainWindow(Window):
         self.userbrowse.connect_signals()
 
     def _init_search_downloads_split(self):
-        """Keep a resizable downloads table beneath search results in GTK3."""
-        # IconNotebook creates the search notebook inside search_content.
+        """Place the existing Downloads controls permanently below Search.
+
+        Reuse each page's original content instead of duplicating the transfer
+        controller or moving it whenever the user switches tabs.
+        """
         search_widget = self.search_content.get_children()[0]
+        downloads_widget = self.downloads_page.get_children()[0]
+
         self.search_downloads_split = Gtk.Paned.new(Gtk.Orientation.VERTICAL)
         self.search_downloads_split.set_wide_handle(True)
         self.search_content.pack_start(self.search_downloads_split, True, True, 0)
 
-        # Gtk.Widget.reparent() is supported in GTK3 and keeps the widget alive
-        # during the move. PyGObject does not expose GObject.ref()/unref().
+        # GTK3 reparenting keeps the original live widgets and signals intact.
         search_widget.reparent(self.search_downloads_split)
+        downloads_widget.reparent(self.search_downloads_split)
+
         self.search_downloads_split.child_set_property(search_widget, "resize", True)
         self.search_downloads_split.child_set_property(search_widget, "shrink", False)
+        self.search_downloads_split.child_set_property(downloads_widget, "resize", False)
+        self.search_downloads_split.child_set_property(downloads_widget, "shrink", False)
+
+        # The Downloads toolbar is now part of Search instead of being shown
+        # when the separate Downloads tab is selected.
+        self.downloads_toolbar.show()
+        downloads_widget.show()
+        self.downloads_content.show()
         self.search_downloads_split.set_position(420)
         self.search_downloads_split.show()
 
-    def _update_search_downloads_split(self, page_id):
-        """Move the *same* download view between Search and Downloads tabs.
-
-        GTK widgets can only have one parent, so never clone the transfers
-        model or present a disconnected second downloads table.
-        """
-        if self.search_downloads_split is None:
-            return
-
-        downloads_widget = self.downloads.container
-        target_parent = (
-            self.search_downloads_split if page_id == "search"
-            else self.downloads_content
-        )
-        current_parent = downloads_widget.get_parent()
-        if current_parent is target_parent:
-            return
-
-        downloads_widget.reparent(target_parent)
-        if page_id == "search":
-            self.search_downloads_split.child_set_property(downloads_widget, "resize", False)
-            self.search_downloads_split.child_set_property(downloads_widget, "shrink", False)
-
     def on_switch_page(self, _notebook, page, _page_num):
-        self._update_search_downloads_split(page.id)
         self.set_active_header_bar(page.id)
         if GTK_API_VERSION == 3 and page.id == "search":
             self.downloads.update_model()
