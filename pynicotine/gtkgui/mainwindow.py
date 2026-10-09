@@ -822,11 +822,7 @@ class MainWindow(Window):
         self.userbrowse.connect_signals()
 
     def _init_search_downloads_split(self):
-        """Place the existing Downloads controls permanently below Search.
-
-        Reuse each page's original content instead of duplicating the transfer
-        controller or moving it whenever the user switches tabs.
-        """
+        """Keep original Search and Downloads widgets in a permanent GTK3 split."""
         search_widget = self.search_content.get_children()[0]
         downloads_widget = self.downloads_page.get_children()[0]
 
@@ -834,30 +830,33 @@ class MainWindow(Window):
         self.search_downloads_split.set_wide_handle(True)
         self.search_content.pack_start(self.search_downloads_split, True, True, 0)
 
-        # GTK3 reparenting keeps the original live widgets and signals intact.
-        search_widget.reparent(self.search_downloads_split)
+        # Only the upper search area may be hidden when no searches exist.
+        # IconNotebook normally hides search_content itself; that previously
+        # hid both panes, including Downloads, at application startup.
+        search_upper = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, visible=True)
+        self.search_downloads_split.pack1(search_upper, resize=True, shrink=False)
+        search_widget.reparent(search_upper)
+        self.search.parent = search_upper
+
+        # Transfer the *existing* Downloads page content, including its toolbar.
         downloads_widget.reparent(self.search_downloads_split)
-
-        # Keep the old Downloads tab navigable during this migration.
-        # Its original controls have moved, so explain where to find them.
-        relocated_label = Gtk.Label(label=_("Downloads are now displayed below Search Files."))
-        relocated_label.set_margin_top(24)
-        relocated_label.set_margin_bottom(24)
-        self.downloads_page.pack_start(relocated_label, False, False, 0)
-        relocated_label.show()
-
-        self.search_downloads_split.child_set_property(search_widget, "resize", True)
-        self.search_downloads_split.child_set_property(search_widget, "shrink", False)
         self.search_downloads_split.child_set_property(downloads_widget, "resize", False)
         self.search_downloads_split.child_set_property(downloads_widget, "shrink", False)
-
-        # The Downloads toolbar is now part of Search instead of being shown
-        # when the separate Downloads tab is selected.
-        self.downloads_toolbar.show()
-        downloads_widget.show()
-        self.downloads_content.show()
         self.search_downloads_split.set_position(420)
+
+        self.search_content.show()
+        self.downloads_toolbar.show()
+        self.downloads_content.show()
+        downloads_widget.show()
         self.search_downloads_split.show()
+
+        # Remove the now-empty Downloads navigation page.
+        # Preserve the controller and its actual widgets in the lower pane.
+        if self.notebook.page_num(self.downloads_page) >= 0:
+            self.notebook.remove_page(self.downloads_page)
+        config.sections["ui"]["modes_visible"]["downloads"] = False
+        if config.sections["ui"]["last_tab_id"] == "downloads":
+            config.sections["ui"]["last_tab_id"] = "search"
 
     def on_switch_page(self, _notebook, page, _page_num):
         self.set_active_header_bar(page.id)
