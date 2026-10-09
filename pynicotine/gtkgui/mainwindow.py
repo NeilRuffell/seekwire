@@ -55,6 +55,13 @@ class MainWindow(Window):
     def __init__(self, application):
 
         self.application = application
+
+        # SeekWire's GTK3 interface uses a traditional window-manager titlebar
+        # and a separate application menubar, never a GTK headerbar.
+        if GTK_API_VERSION == 3:
+            config.sections["ui"]["header_bar"] = False
+            set_use_header_bar(False)
+
         self.current_page_id = ""
         self.auto_away = False
         self.away_timer_id = None
