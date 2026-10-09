@@ -176,6 +176,9 @@ class Searches(IconNotebook):
             self.window.update_title()
             break
 
+        if GTK_API_VERSION == 3:
+            self.window.update_search_sidebar_filters()
+
     def on_read_changed_page(self, _notebook, page):
 
         for tab in self.pages.values():
@@ -261,6 +264,9 @@ class Searches(IconNotebook):
                          close_callback=page.on_close)
         page.set_label(self.get_tab_label_inner(page.container))
 
+        if GTK_API_VERSION == 3:
+            self.window.update_search_sidebar_filters()
+
         return page
 
     def add_search(self, token, search, switch_page=True):
@@ -305,11 +311,17 @@ class Searches(IconNotebook):
 
         page.clear()
 
+        if GTK_API_VERSION == 3 and self.window.active_sidebar_filter_page is page:
+            page.filters_container.reparent(page.seekwire_filters_parent)
+            self.window.active_sidebar_filter_page = None
+
         if page.show_page:
             self.remove_page(page.container, page_args=(page.text, page.mode, page.room, page.searched_users))
 
         del self.pages[token]
         page.destroy()
+        if GTK_API_VERSION == 3:
+            self.window.update_search_sidebar_filters()
 
     def search_failed(self, token, is_offline=False):
 
