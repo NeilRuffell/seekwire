@@ -298,7 +298,9 @@ class Transfers:
         parent = self.container.get_parent()
         # The integrated search/downloads split must stay visible even if
         # there are no downloads yet, or the search results disappear too.
-        if GTK_API_VERSION == 3 and isinstance(parent, Gtk.Paned):
+        if GTK_API_VERSION == 3 and self.type == "download" and (
+            self.window.search_downloads_split is not None
+        ):
             return
         parent.set_visible(visible)
 
@@ -420,7 +422,7 @@ class Transfers:
         integrated_downloads_visible = (
             GTK_API_VERSION == 3 and self.type == "download"
             and self.window.current_page_id == "search"
-            and isinstance(self.container.get_parent(), Gtk.Paned)
+            and self.window.search_downloads_split is not None
         )
         if self.window.current_page_id != self.transfer_page.id and not integrated_downloads_visible:
             if transfer is not None and transfer.iterator is None:
