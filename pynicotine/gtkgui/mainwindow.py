@@ -921,12 +921,13 @@ class MainWindow(Window):
         if config.sections["ui"]["last_tab_id"] == "downloads":
             config.sections["ui"]["last_tab_id"] = "search"
 
-    def update_search_sidebar_filters(self):
+    def update_search_sidebar_filters(self, active_widget=None):
         """Show the active search's existing GTK filter controls in the sidebar."""
         if self.search_filters_sidebar is None:
             return
 
-        active_widget = self.search.get_current_page()
+        if active_widget is None:
+            active_widget = self.search.get_current_page()
         active_page = next(
             (tab for tab in self.search.pages.values() if tab.container is active_widget),
             None
@@ -938,12 +939,16 @@ class MainWindow(Window):
                 # Restore ownership to the tab so closing it destroys all its widgets.
                 old_page.clear_undo_filters_button.reparent(old_page.seekwire_clear_parent)
                 old_page.filters_container.reparent(old_page.seekwire_filters_parent)
+                # The old tab still exists, but its filter controls must only
+                # be visible in the shared sidebar, never above search results.
+                old_page.filters_container.hide()
                 self.active_sidebar_filter_page = None
 
         if active_page is not None and self.active_sidebar_filter_page is not active_page:
             if not hasattr(active_page, "seekwire_filters_parent"):
                 active_page.seekwire_filters_parent = active_page.filters_container.get_parent()
             active_page.filters_container.reparent(self.search_filters_sidebar)
+            active_page.filters_container.show()
             self.active_sidebar_filter_page = active_page
 
             # The existing filter FlowBox was designed for a wide horizontal
