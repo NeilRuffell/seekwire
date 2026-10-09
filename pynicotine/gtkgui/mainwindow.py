@@ -306,6 +306,8 @@ class MainWindow(Window):
 
         # Tab visibility/order
         self.append_main_tabs()
+        if GTK_API_VERSION == 3:
+            self._compact_gtk3_navigation()
         self.set_tab_positions()
         self.set_main_tabs_order()
         self.set_main_tabs_visibility()
@@ -830,6 +832,29 @@ class MainWindow(Window):
                 self.notebook.set_tab_expand(tab.page, False)
             else:
                 self.set_tab_expand(tab.page)
+
+    def _compact_gtk3_navigation(self):
+        """Use traditional, tightly spaced GTK3 navigation and search controls.
+
+        Retain the original widgets and GTK theme rendering; alter only their
+        container spacing and tab-label margins.
+        """
+        for tab in self.tabs.values():
+            label = self.notebook.get_tab_label(tab.page)
+            if label is not None:
+                label.set_margin_start(2)
+                label.set_margin_end(2)
+                label.set_margin_top(0)
+                label.set_margin_bottom(0)
+
+        # Each page owns its original toolbar; only Search is made compact
+        # here, leaving other pages' layouts and controls unchanged.
+        toolbar_content = self.search_toolbar.get_children()[0]
+        toolbar_content.set_margin_start(3)
+        toolbar_content.set_margin_end(3)
+        toolbar_content.set_margin_top(2)
+        toolbar_content.set_margin_bottom(2)
+        toolbar_content.set_spacing(4)
 
     def connect_tab_signals(self):
 
