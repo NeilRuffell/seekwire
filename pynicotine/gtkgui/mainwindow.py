@@ -887,7 +887,7 @@ class MainWindow(Window):
 
         # Transfer the *existing* Downloads page content, including its toolbar.
         downloads_widget.reparent(self.search_downloads_split)
-        self.search_downloads_split.child_set_property(downloads_widget, "resize", False)
+        self.search_downloads_split.child_set_property(downloads_widget, "resize", True)
         self.search_downloads_split.child_set_property(downloads_widget, "shrink", False)
         self.search_downloads_split.set_position(
             config.sections["ui"].get("seekwire_downloads_position",
