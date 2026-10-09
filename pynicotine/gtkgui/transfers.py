@@ -294,6 +294,14 @@ class Transfers:
 
         self.__dict__.clear()
 
+    def _set_transfer_parent_visible(self, visible):
+        parent = self.container.get_parent()
+        # The integrated search/downloads split must stay visible even if
+        # there are no downloads yet, or the search results disappear too.
+        if GTK_API_VERSION == 3 and isinstance(parent, Gtk.Paned):
+            return
+        parent.set_visible(visible)
+
     def on_focus(self, *_args):
 
         self.update_model()
@@ -317,7 +325,7 @@ class Transfers:
             # as pending.
             transfer.iterator = self.PENDING_ITERATOR_REBUILD
 
-        self.container.get_parent().set_visible(bool(transfer_list))
+        self._set_transfer_parent_visible(bool(transfer_list))
 
     def select_transfers(self):
 
@@ -409,7 +417,12 @@ class Transfers:
 
     def update_model(self, transfer=None, update_parent=True):
 
-        if self.window.current_page_id != self.transfer_page.id:
+        integrated_downloads_visible = (
+            GTK_API_VERSION == 3 and self.type == "download"
+            and self.window.current_page_id == "search"
+            and isinstance(self.container.get_parent(), Gtk.Paned)
+        )
+        if self.window.current_page_id != self.transfer_page.id and not integrated_downloads_visible:
             if transfer is not None and transfer.iterator is None:
                 self.window.notebook.request_tab_changed(self.transfer_page)
                 transfer.iterator = self.PENDING_ITERATOR_ADD
@@ -554,7 +567,7 @@ class Transfers:
 
             if not self.tree_view.iterators:
                 # Show tab description
-                self.container.get_parent().set_visible(False)
+                self._set_transfer_parent_visible(False)
 
             self.update_num_users_files()
             return
@@ -736,7 +749,7 @@ class Transfers:
 
         if not self.tree_view.iterators:
             # Hide tab description
-            self.container.get_parent().set_visible(True)
+            self._set_transfer_parent_visible(True)
 
         if self.grouping_mode != "ungrouped":
             # Group by folder or user
@@ -958,7 +971,7 @@ class Transfers:
 
         if not self.tree_view.iterators:
             # Show tab description
-            self.container.get_parent().set_visible(False)
+            self._set_transfer_parent_visible(False)
 
     def clear_transfers(self, *_args):
         self.update_parent_rows()
